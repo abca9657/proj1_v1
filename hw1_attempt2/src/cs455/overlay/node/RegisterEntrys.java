@@ -22,5 +22,14 @@ public class RegisterEntrys {
 	public ArrayList<RegEntry> getList() {
 		return regEntrys;
 	}
+	
+	//check the registry for the same IPaddress: 
+	public int checkForDuplicateIP(byte[] IPaddr) {
+		return regEntrys.indexOf(IPaddr);
+	}
+	
+	public int sizeOf() {
+		return regEntrys.size();
+	}
 
 }

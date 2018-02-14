@@ -2,8 +2,8 @@ package cs455.overlay.wireformats;
 
 // what should go here? 
 public interface Protocol {
-	/*public void OVERLAY_NODE_SENDS_REGISTRATION();
-	public void REGISTRY_REPORTS_REGISTRATION_STATUS();
+	public byte OVERLAY_NODE_SENDS_REGISTRATION = 2;
+	/*public void REGISTRY_REPORTS_REGISTRATION_STATUS();
 	
 	static final byte OVERLAY_NODE_SENDS_DEREGISTRATION = 4;
 	static final byte REGISTRY_REPORTS_DEREGISTRATION_STATUS = 5;

@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public interface Event {
 	
-	public void messageType(byte msgType);
+	//public void messageType(byte msgType);
 	
 	// Marshall bytes: 
 	public byte[] getBytes () throws IOException;

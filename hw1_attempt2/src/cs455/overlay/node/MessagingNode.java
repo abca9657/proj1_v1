@@ -7,12 +7,18 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import cs455.overlay.transport.TCPConnection;
+import cs455.overlay.transport.TCPServerThread;
+import cs455.overlay.wireformats.Event;
+import cs455.overlay.wireformats.EventFactory;
+import cs455.overlay.wireformats.OVERLAY_NODE_SENDS_REGISTRATION;
+import cs455.overlay.wireformats.REGISTRY_REPORTS_REGISTRATION_STATUS;
 
-public class MessagingNode {
+public class MessagingNode implements Node {
 	private final int regPortNum;
+	private final String hostName;
 
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws InterruptedException, IOException {
 		// parse input arguments from user: 
 		if (args.length != 2) {
 			System.err.println("Usage: java cs455.overlay.node.MessagingNode <RegistryHost> <RegistryPort>");
@@ -20,91 +26,60 @@ public class MessagingNode {
 		}
 		String hostName = args[0];
 		int regPortNum = Integer.parseInt(args[1]);
+		System.out.println("parsed input");
 		
+		MessagingNode msgNode = new MessagingNode(regPortNum, hostName);
+		System.out.println("MessagingNode object called");
+		//Node nodeObj = (Node) efObj;
 		
-		
-		 
-		
-		
-		
-		/*
-		//establish socket to talk to registry: 
-		try(Socket sock = new Socket(hostName, regPortNum)) {
-			BufferedReader reader = 
-					new BufferedReader(new InputStreamReader(sock.getInputStream()));
-			PrintWriter writer = new PrintWriter(sock.getOutputStream());
-			
-			new Thread(new ReadMessages(reader)).start();
-			
-			// Write messages to the registry to be echoed back
-			for(int i=0; i<20; i++) {
-				// this prints to the socket
-				writer.println(i);
-				writer.flush();
-				Thread.sleep(100);
-			}
-			
-			
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-		
-
-	}
+	} // end of mainn
 	
-	private static class ReadMessages implements Runnable {
-		private final BufferedReader reader;
 
-		public ReadMessages(BufferedReader reader) {
-			this.reader = reader;
-		}
 
-		@Override
-		public void run() {
-			
-			// Loop over reader and print it to the standard output: 
-			String s;
-			try {
-				while((s = reader.readLine())!= null) {
-					System.out.println(s);
-				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
-	
-	
-	public MessagingNode(int regPortNum) {
+	public MessagingNode(int regPortNum, String hostName) throws IOException {
+		//System.out.println("reached MessagingNode");
 		this.regPortNum = regPortNum;
+		this.hostName = hostName;
+		//System.out.println("before eventFactory");
+		EventFactory efObj = EventFactory.getInstance();
+		//System.out.println("after eventFactory");
+		TCPServerThread newTCPServerThread = new TCPServerThread(0, this);
+		Thread startTCPServSock = new Thread(newTCPServerThread);
+		startTCPServSock.start();
+		
+		//print Messaging node init
+		System.out.println("messaging node initialized");
+		// Marshall message into byte array (V1):
+		OVERLAY_NODE_SENDS_REGISTRATION msgObj = new OVERLAY_NODE_SENDS_REGISTRATION(null);
+		msgObj.setMessageType(newTCPServerThread.getMsgType());
+		msgObj.setIPaddressLen(newTCPServerThread.getLocalAddrLen());
+		msgObj.setIPaddress(newTCPServerThread.getLocalAddr());
+		msgObj.setPortNum(newTCPServerThread.getLocalPortNum());
+		
+		// Marshall message into byte array (V2):
+		/*
+		OVERLAY_NODE_SENDS_REGISTRATION newRegistrationMsg = new OVERLAY_NODE_SENDS_REGISTRATION(newTCPServerThread.getMsgType(), newTCPServerThread.getLocalAddrLen(),
+				newTCPServerThread.getLocalAddr(), newTCPServerThread.getLocalPortNum());
+		*/
+		//sending message
+		Socket socket = new Socket(hostName, regPortNum);
+		TCPConnection sendRegistryInfo = new TCPConnection(socket, msgObj.getBytes(), this);
+	}
+
+
+
+	@Override
+	public void onEvent(Event msgType) throws IOException {
+		byte[] dataBytes = msgType.getBytes();
+		if(msgType.getType() == 3) {
+			REGISTRY_REPORTS_REGISTRATION_STATUS newStatus = new REGISTRY_REPORTS_REGISTRATION_STATUS(dataBytes);
+			//System.out.println("received status?");
+			String identifier = new String(newStatus.getInfoString());		
+			System.out.println(identifier);
+		}
+		
 	}
 	
-	/*
-	private void run() {
-		try(ServerSocket servSock = new ServerSocket(0)) {
-			// loop forever in order to listen for incoming connections: 
-			while(true) {
-				// Accept all connection requests
-				Socket clientSock = servSock.accept();
-				
-				// Create a new handler object to handle the request: 
-				MessageHandler messageHandler = new MessageHandler(clientSock);	// NEED TO ADD MESSAGE HANDLER
-				
-				// Create a new thread to handle the request, MessageHandler will have to implement Runnable: 
-				Thread t = new Thread(messageHandler);
-				// Run the new thread
-				t.start();
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	*/
+	
 
 }
